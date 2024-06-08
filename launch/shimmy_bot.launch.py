@@ -21,6 +21,8 @@ from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
+import os
+
 
 def generate_launch_description():
     # Declare arguments
@@ -58,6 +60,8 @@ def generate_launch_description():
         ]
     )
     robot_description = {"robot_description": robot_description_content}
+    pkg_share = FindPackageShare(package='shimmy_bot').find('shimmy_bot')
+    robot_localization_file_path = os.path.join(pkg_share, 'config/ekf.yaml')
 
     robot_controllers = PathJoinSubstitution(
         [
@@ -111,9 +115,21 @@ def generate_launch_description():
         arguments=["shimmy_bot", "--controller-manager", "/controller_manager"],
     )
     
-    fgnode=    Node(
+    fgnode=Node(
             package='foxglove_bridge',
             executable='foxglove_bridge',
+        )
+    ekf_config_path = PathJoinSubstitution(
+        [FindPackageShare("shimmy_bot"), "config", "ekf.yaml"]
+    )
+    eksnode = Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='both',
+            parameters=[
+                ekf_config_path
+            ]
         )
 
 #    # Delay rviz start after `joint_state_broadcaster`
@@ -138,7 +154,8 @@ def generate_launch_description():
         joint_state_broadcaster_spawner,
         #delay_rviz_after_joint_state_broadcaster_spawner,
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
-        fgnode
+        fgnode,
+        eksnode
     ]
 
     return LaunchDescription(declared_arguments + nodes)
