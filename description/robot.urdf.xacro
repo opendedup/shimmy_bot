@@ -2,16 +2,47 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro"  name="shimmy">
 
 
-    <xacro:arg name="prefix" default="" />
   <xacro:arg name="use_mock_hardware" default="false" />
+
+  <xacro:arg name="camera_name"   default="zed" />
+  <xacro:arg name="camera_model"  default="zed2" />
+  <xacro:arg name="use_zed_localization" default="true" />
+  <xacro:arg name="baseline" default="0.0" />
+  <xacro:arg name="enable_gnss" default="false" />
 
   <xacro:include filename="$(find shimmy_bot)/description/robot_description.urdf.xacro" />
 
   <xacro:include filename="$(find shimmy_bot)/description/robot.ros2_control.xacro" />
 
-  <xacro:diffbot prefix="$(arg prefix)" />
+  <!-- <xacro:include filename="$(find shimmy_bot)/description/depth_sensor.urdf.xacro" /> -->
+
+  <!-- Add one ZED Camera -->
+  <xacro:diffbot/>
+
+<xacro:property name="depth_sensor_pose">
+    <origin xyz="0.14 0.0 0.045" rpy="0 0 0"/>
+</xacro:property>
+<!--
+  <xacro:depth_sensor>
+    <xacro:insert_block name="depth_sensor_pose" />
+  </xacro:depth_sensor> -->
 
   <xacro:diffbot_ros2_control
-    name="DiffBot" prefix="$(arg prefix)" use_mock_hardware="$(arg use_mock_hardware)"/>
+    name="DiffBot" use_mock_hardware="$(arg use_mock_hardware)"/>
+  <xacro:include filename="$(find shimmy_bot)/description/zed_macro.urdf.xacro" />
+  <xacro:zed_camera name="$(arg camera_name)" model="$(arg camera_model)">
+  <xacro:insert_block name="depth_sensor_pose" />
+  </xacro:zed_camera>
+  
 
+  
+
+    <joint name="$(arg camera_name)_joint" type="fixed">
+      <parent link="$(arg camera_name)_camera_link"/>
+      <child link="base_link"/>
+      <origin
+        xyz="-0.012 0.0 -0.25"
+        rpy="0 0 0"
+      />
+    </joint>
 </robot>

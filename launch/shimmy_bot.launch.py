@@ -13,40 +13,30 @@
 # limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler,OpaqueFunction,SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
-from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, LaunchConfiguration
-
+from launch.substitutions import Command, FindExecutable, PythonExpression, PathJoinSubstitution, LaunchConfiguration
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 import os
 
+camera_name = 'zed'
+camera_model = 'zed2'
 
-def generate_launch_description():
+def launch_setup(context, *args, **kwargs):
     # Declare arguments
     declared_arguments = []
-#    declared_arguments.append(
-#        DeclareLaunchArgument(
-#            "gui",
-#            default_value="true",
-#            description="Start RViz2 automatically with this launch file.",
-#        )
-#    )
-#    declared_arguments.append(
-#        DeclareLaunchArgument(
-#            "use_mock_hardware",
-#            default_value="false",
-#            description="Start robot with mock hardware mirroring command to its states.",
-#        )
-#    )
-
-    # Initialize Arguments
-#    gui = LaunchConfiguration("gui")
-#    use_mock_hardware = LaunchConfiguration("use_mock_hardware")
 
     # Get URDF via xacro
+    
+    # sensors_launch_path = PathJoinSubstitution(
+    #     [FindPackageShare('shimmy_bot'), 'launch', 'sensors.launch.py']
+    # )
+    use_zed_localization = LaunchConfiguration('use_zed_localization')
+    
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
@@ -54,6 +44,10 @@ def generate_launch_description():
             PathJoinSubstitution(
                 [FindPackageShare("shimmy_bot"),"description", "robot.urdf.xacro"]
             ),
+            " ",
+            'camera_name:=', camera_name, ' ',
+            'camera_model:=', camera_model, ' ',
+            'use_zed_localization:=', use_zed_localization,
 #            " ",
 #            "use_mock_hardware:=",
 #            use_mock_hardware,
@@ -61,7 +55,6 @@ def generate_launch_description():
     )
     robot_description = {"robot_description": robot_description_content}
     pkg_share = FindPackageShare(package='shimmy_bot').find('shimmy_bot')
-    robot_localization_file_path = os.path.join(pkg_share, 'config/ekf.yaml')
 
     robot_controllers = PathJoinSubstitution(
         [
@@ -70,9 +63,6 @@ def generate_launch_description():
             "shimmy.yaml",
         ]
     )
-#    rviz_config_file = PathJoinSubstitution(
-#        [FindPackageShare("ros2_control_demo_description"), "diffbot/rviz", "diffbot.rviz"]
-#    )
 
     control_node = Node(
         package="controller_manager",
@@ -93,15 +83,17 @@ def generate_launch_description():
         ],
     )
     
-    
-#    rviz_node = Node(
-#        package="rviz2",
-#        executable="rviz2",
-#        name="rviz2",
-#        output="log",
-#        arguments=["-d", rviz_config_file],
-#        condition=IfCondition(gui),
-#    )
+    zed_wrapper_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution(
+                [FindPackageShare('zed_wrapper'), 'launch', 'zed_camera.launch.py']
+            )),
+            launch_arguments={
+                'camera_name': camera_name,
+                'camera_model': camera_model,
+                'publish_imu_tf': "false",
+                'sensors_pub_rate': "grab rate"
+            }.items()   
+        )
 
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
@@ -119,26 +111,18 @@ def generate_launch_description():
             package='foxglove_bridge',
             executable='foxglove_bridge',
         )
-    ekf_config_path = PathJoinSubstitution(
-        [FindPackageShare("shimmy_bot"), "config", "ekf.yaml"]
-    )
-    eksnode = Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='ekf_filter_node',
-            output='both',
-            parameters=[
-                ekf_config_path
-            ]
-        )
-
-#    # Delay rviz start after `joint_state_broadcaster`
-#    delay_rviz_after_joint_state_broadcaster_spawner = RegisterEventHandler(
-#        event_handler=OnProcessExit(
-#            target_action=joint_state_broadcaster_spawner,
-#            on_exit=[rviz_node],
-#        )
-#    )
+    # ekf_config_path = PathJoinSubstitution(
+    #     [FindPackageShare("shimmy_bot"), "config", "ekf.yaml"]
+    # )
+    # eksnode = Node(
+    #         package='robot_localization',
+    #         executable='ekf_node',
+    #         name='ekf_filter_node',
+    #         output='both',
+    #         parameters=[
+    #             ekf_config_path
+    #         ]
+    #     )
 
     # Delay start of robot_controller after `joint_state_broadcaster`
     delay_robot_controller_spawner_after_joint_state_broadcaster_spawner = RegisterEventHandler(
@@ -147,15 +131,47 @@ def generate_launch_description():
             on_exit=[robot_controller_spawner],
         )
     )
+    
+    fake_laser_config_path = PathJoinSubstitution(
+        [FindPackageShare('shimmy_bot'), 'config', 'fake_laser.yaml']
+    )
+    
+    fake_laser_node=Node(
+            package='depthimage_to_laserscan',
+            executable='depthimage_to_laserscan_node',
+            remappings=[('depth', '/zed/zed_node/depth/depth_registered'),
+                        ('depth_camera_info', '/zed/zed_node/depth/camera_info')],
+            parameters=[fake_laser_config_path]
+    ) 
 
-    nodes = [
+    return [
         control_node,
         robot_state_pub_node,
         joint_state_broadcaster_spawner,
+        zed_wrapper_launch,
         #delay_rviz_after_joint_state_broadcaster_spawner,
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
         fgnode,
-        eksnode
+        fake_laser_node,
+        #eksnode
     ]
-
-    return LaunchDescription(declared_arguments + nodes)
+    
+    # launch_descriptions = [
+    #     IncludeLaunchDescription(
+    #         PythonLaunchDescriptionSource(sensors_launch_path),
+    #     )
+        
+    # ]
+def generate_launch_description():
+    return LaunchDescription(
+        [
+            SetEnvironmentVariable(name='RCUTILS_COLORIZED_OUTPUT', value='1'),
+            DeclareLaunchArgument(
+                'use_zed_localization',
+                default_value='true',
+                description='Creates a TF tree with `camera_link` as root frame if `true`, otherwise the root is `base_ling`.',
+                choices=['true', 'false']),
+            OpaqueFunction(function=launch_setup)    
+        ]
+    )
+    #return LaunchDescription(declared_arguments + nodes + launch_descriptions)
