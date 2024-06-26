@@ -79,7 +79,17 @@ def launch_setup(context, *args, **kwargs):
         output="both",
         parameters=[robot_description],
         remappings=[
-            ("/shimmy/cmd_vel_unstamped", "/cmd_vel"),
+            ("/shimmy_bot/cmd_vel_unstamped", "/cmd_vel"),
+        ],
+    )
+    
+    twist_stamper = Node(
+        package="twist_stamper",
+        executable="twist_stamper",
+        output="both",
+        remappings=[
+            ("/cmd_vel_in", "/cmd_vel"),
+            ("/cmd_vel_out", "/shimmy_bot/cmd_vel"),
         ],
     )
     
@@ -90,8 +100,7 @@ def launch_setup(context, *args, **kwargs):
             launch_arguments={
                 'camera_name': camera_name,
                 'camera_model': camera_model,
-                'publish_imu_tf': "false",
-                'sensors_pub_rate': "grab rate"
+                'publish_imu_tf': "false"
             }.items()   
         )
 
@@ -132,17 +141,17 @@ def launch_setup(context, *args, **kwargs):
         )
     )
     
-    fake_laser_config_path = PathJoinSubstitution(
-        [FindPackageShare('shimmy_bot'), 'config', 'fake_laser.yaml']
-    )
+    # fake_laser_config_path = PathJoinSubstitution(
+    #     [FindPackageShare('shimmy_bot'), 'config', 'fake_laser.yaml']
+    # )
     
-    fake_laser_node=Node(
-            package='depthimage_to_laserscan',
-            executable='depthimage_to_laserscan_node',
-            remappings=[('depth', '/zed/zed_node/depth/depth_registered'),
-                        ('depth_camera_info', '/zed/zed_node/depth/camera_info')],
-            parameters=[fake_laser_config_path]
-    ) 
+    # fake_laser_node=Node(
+    #         package='depthimage_to_laserscan',
+    #         executable='depthimage_to_laserscan_node',
+    #         remappings=[('depth', '/zed/zed_node/depth/depth_registered'),
+    #                     ('depth_camera_info', '/zed/zed_node/depth/camera_info')],
+    #         parameters=[fake_laser_config_path]
+    # ) 
 
     return [
         control_node,
@@ -152,7 +161,8 @@ def launch_setup(context, *args, **kwargs):
         #delay_rviz_after_joint_state_broadcaster_spawner,
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
         fgnode,
-        fake_laser_node,
+        twist_stamper,
+        #fake_laser_node,
         #eksnode
     ]
     
