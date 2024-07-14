@@ -63,6 +63,13 @@ def launch_setup(context, *args, **kwargs):
             "shimmy.yaml",
         ]
     )
+    zed_controllers = PathJoinSubstitution(
+        [
+            FindPackageShare("shimmy_bot"),
+            "config",
+            "zed_common.yaml",
+        ]
+    )
 
     control_node = Node(
         package="controller_manager",
@@ -100,8 +107,19 @@ def launch_setup(context, *args, **kwargs):
             launch_arguments={
                 'camera_name': camera_name,
                 'camera_model': camera_model,
-                'publish_imu_tf': "false"
-            }.items()   
+                'ros_params_override_path': zed_controllers
+            }.items()
+        )
+    
+    shimmy_talk_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution(
+                [FindPackageShare('shimmy_talk'), 'launch', 'shimmy_talk.launch.py']
+            )),
+            launch_arguments={
+                'camera_name': camera_name,
+                'camera_model': camera_model,
+                'ros_params_override_path': zed_controllers
+            }.items()
         )
 
     joint_state_broadcaster_spawner = Node(
@@ -162,6 +180,7 @@ def launch_setup(context, *args, **kwargs):
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
         fgnode,
         twist_stamper,
+        shimmy_talk_launch,
         #fake_laser_node,
         #eksnode
     ]
