@@ -20,8 +20,10 @@ from launch.substitutions import Command, FindExecutable, PythonExpression, Path
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from ament_index_python.packages import get_package_share_directory
 
 import os
+import yaml
 
 camera_name = 'zed'
 camera_model = 'zed2'
@@ -70,7 +72,29 @@ def launch_setup(context, *args, **kwargs):
             "zed_common.yaml",
         ]
     )
-
+    
+    rtabmap_params = get_package_share_directory('shimmy_bot') + '/config/rtabmap.yaml'
+    print("##########################################################")
+    with open(rtabmap_params, 'r') as file:
+        rtabmap_config = yaml.load(file, Loader=yaml.BaseLoader)
+    rtabmap_launch_arguments={
+                'rtabmap_args': "--delete_db_on_start",
+                'rgb_topic': "/zed/zed_node/rgb/image_rect_color",
+                'depth_topic':'/zed/zed_node/depth/depth_registered',
+                'camera_info_topic':'/zed/zed_node/rgb/camera_info',
+                'frame_id':'zed_camera_link',
+                'approx_sync':'false',
+                'wait_imu_to_init':'false',
+                'imu_topic':'/zed/zed_node/imu/data',
+                'qos': '1',
+                'odom_topic':'/zed/zed_node/odom',
+                'publish_tf_odom':'false',
+                'namespace':'/',
+                'queue_size':'30',
+                #'visual_odometry':'true'
+            }
+    rtabmap_config.update(rtabmap_launch_arguments)
+    print(rtabmap_config)
     control_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
@@ -100,6 +124,12 @@ def launch_setup(context, *args, **kwargs):
         ],
     )
     
+    shimmy_move = Node(
+        package="shimmy_move",
+        executable="shimmy_move",
+        output="both",
+    )
+    
     zed_wrapper_launch = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution(
                 [FindPackageShare('zed_wrapper'), 'launch', 'zed_camera.launch.py']
@@ -109,6 +139,13 @@ def launch_setup(context, *args, **kwargs):
                 'camera_model': camera_model,
                 'ros_params_override_path': zed_controllers
             }.items()
+        )
+    
+    rtabmap_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution(
+                [FindPackageShare('rtabmap_launch'), 'launch', 'rtabmap.launch.py']
+            )),
+            launch_arguments=rtabmap_config.items()
         )
     
     shimmy_talk_launch = IncludeLaunchDescription(
@@ -138,18 +175,6 @@ def launch_setup(context, *args, **kwargs):
             package='foxglove_bridge',
             executable='foxglove_bridge',
         )
-    # ekf_config_path = PathJoinSubstitution(
-    #     [FindPackageShare("shimmy_bot"), "config", "ekf.yaml"]
-    # )
-    # eksnode = Node(
-    #         package='robot_localization',
-    #         executable='ekf_node',
-    #         name='ekf_filter_node',
-    #         output='both',
-    #         parameters=[
-    #             ekf_config_path
-    #         ]
-    #     )
 
     # Delay start of robot_controller after `joint_state_broadcaster`
     delay_robot_controller_spawner_after_joint_state_broadcaster_spawner = RegisterEventHandler(
@@ -159,38 +184,22 @@ def launch_setup(context, *args, **kwargs):
         )
     )
     
-    # fake_laser_config_path = PathJoinSubstitution(
-    #     [FindPackageShare('shimmy_bot'), 'config', 'fake_laser.yaml']
-    # )
     
-    # fake_laser_node=Node(
-    #         package='depthimage_to_laserscan',
-    #         executable='depthimage_to_laserscan_node',
-    #         remappings=[('depth', '/zed/zed_node/depth/depth_registered'),
-    #                     ('depth_camera_info', '/zed/zed_node/depth/camera_info')],
-    #         parameters=[fake_laser_config_path]
-    # ) 
 
     return [
         control_node,
         robot_state_pub_node,
         joint_state_broadcaster_spawner,
         zed_wrapper_launch,
-        #delay_rviz_after_joint_state_broadcaster_spawner,
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
         fgnode,
         twist_stamper,
         shimmy_talk_launch,
-        #fake_laser_node,
-        #eksnode
+        rtabmap_launch,
+        shimmy_move
     ]
     
-    # launch_descriptions = [
-    #     IncludeLaunchDescription(
-    #         PythonLaunchDescriptionSource(sensors_launch_path),
-    #     )
-        
-    # ]
+    
 def generate_launch_description():
     return LaunchDescription(
         [
