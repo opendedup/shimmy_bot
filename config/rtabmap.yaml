@@ -8,7 +8,20 @@ subscribe_scan:         false
 subscribe_scan_cloud:   false
 subscribe_user_data:    false
 subscribe_odom_info:    false
-
+visual_odometry:        false
+rtabmap_args:           "--delete_db_on_start"
+rgb_topic:              "/zed/zed_node/rgb/image_rect_color"
+depth_topic:            "/zed/zed_node/depth/depth_registered"
+camera_info_topic:      "/zed/zed_node/rgb/camera_info"
+frame_id:               "zed_camera_link"
+approx_sync:            true
+wait_imu_to_init:       true
+imu_topic:              "/zed/zed_node/imu/data"
+qos:                    1
+odom_topic:             "/zed/zed_node/odom"
+publish_tf_odom:        false'
+namespace:              '/'
+queue_size:             30
 database_path:      "~/.ros/rtabmap.db"
 
 frame_id:       "zed_camera_link"
@@ -16,14 +29,11 @@ map_frame_id:   "map"
 odom_frame_id:  "odom"                   # odometry from odom msg to have covariance - Remapped by launch file
 odom_tf_angular_variance:  0.001     # If TF is used to get odometry, this is the default angular variance
 odom_tf_linear_variance:   0.001     # If TF is used to get odometry, this is the default linear variance
-tf_delay:       0.02
+tf_delay:       1.02
 publish_tf:     false                # Set to false if fusing different poses (map->odom) with UKF
 
-odom_sensor_sync:               true
+odom_sensor_sync:               false
 wait_for_transform_duration:    0.2
-approx_sync:                    true
-
-queue_size: 10
 
 scan_normal_k:  0
 
@@ -48,7 +58,7 @@ Grid:
     FootprintWidth:         0.18
     MaxGroundAngle:         30.0
     MinGroundHeight:        -0.5
-    MaxGroundHeight:        -0.4
+    MaxGroundHeight:        -0.40
     MaxObstacleHeight:      0.1
     NoiseFilteringMinNeighbors: 5
     NoiseFilteringRadius:   0.1

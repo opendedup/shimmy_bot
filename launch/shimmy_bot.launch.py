@@ -15,7 +15,7 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler,OpaqueFunction,SetEnvironmentVariable
 from launch.conditions import IfCondition
-from launch.event_handlers import OnProcessExit
+from launch.event_handlers import OnProcessExit, OnProcessStart
 from launch.substitutions import Command, FindExecutable, PythonExpression, PathJoinSubstitution, LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
@@ -83,8 +83,8 @@ def launch_setup(context, *args, **kwargs):
                 'depth_topic':'/zed/zed_node/depth/depth_registered',
                 'camera_info_topic':'/zed/zed_node/rgb/camera_info',
                 'frame_id':'zed_camera_link',
-                'approx_sync':'false',
-                'wait_imu_to_init':'false',
+                'approx_sync':'true',
+                'wait_imu_to_init':'true',
                 'imu_topic':'/zed/zed_node/imu/data',
                 'qos': '1',
                 'odom_topic':'/zed/zed_node/odom',
@@ -130,6 +130,8 @@ def launch_setup(context, *args, **kwargs):
         output="both",
     )
     
+    
+    
     zed_wrapper_launch = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution(
                 [FindPackageShare('zed_wrapper'), 'launch', 'zed_camera.launch.py']
@@ -137,7 +139,7 @@ def launch_setup(context, *args, **kwargs):
             launch_arguments={
                 'camera_name': camera_name,
                 'camera_model': camera_model,
-                'ros_params_override_path': zed_controllers
+                #'ros_params_override_path': zed_controllers
             }.items()
         )
     
@@ -185,6 +187,7 @@ def launch_setup(context, *args, **kwargs):
     )
     
     
+    
 
     return [
         control_node,
@@ -194,9 +197,9 @@ def launch_setup(context, *args, **kwargs):
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
         fgnode,
         twist_stamper,
-        shimmy_talk_launch,
         rtabmap_launch,
-        shimmy_move
+        shimmy_move,
+        #shimmy_talk_launch
     ]
     
     
@@ -207,7 +210,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 'use_zed_localization',
                 default_value='true',
-                description='Creates a TF tree with `camera_link` as root frame if `true`, otherwise the root is `base_ling`.',
+                description='Creates a TF tree with `camera_link` as root frame if `true`, otherwise the root is `base_link`.',
                 choices=['true', 'false']),
             OpaqueFunction(function=launch_setup)    
         ]

@@ -30,7 +30,7 @@
 
   <xacro:diffbot_ros2_control
     name="DiffBot" use_mock_hardware="$(arg use_mock_hardware)"/>
-  <xacro:include filename="$(find zed_wrapper)/urdf/zed_macro.urdf.xacro" />
+  <xacro:include filename="$(find shimmy_bot)/description/zed_macro.urdf.xacro" />
   <xacro:zed_camera name="$(arg camera_name)" model="$(arg camera_model)">
   <xacro:insert_block name="depth_sensor_pose" />
   </xacro:zed_camera>
