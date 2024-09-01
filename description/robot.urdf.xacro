@@ -1,48 +1,36 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro"  name="shimmy">
 
-
   <xacro:arg name="use_mock_hardware" default="false" />
-
   <xacro:arg name="camera_name"   default="zed" />
   <xacro:arg name="camera_model"  default="zed2" />
   <xacro:arg name="use_zed_localization" default="true" />
-  <xacro:arg name="baseline" default="-0.1" />
+  <xacro:arg name="baseline" default="0.0" />
   <xacro:arg name="enable_gnss" default="false" />
 
   <xacro:include filename="$(find shimmy_bot)/description/robot_description.urdf.xacro" />
-
   <xacro:include filename="$(find shimmy_bot)/description/robot.ros2_control.xacro" />
-
-  <!-- <xacro:include filename="$(find shimmy_bot)/description/depth_sensor.urdf.xacro" /> -->
-
-  <!-- Add one ZED Camera -->
+  <!-- <xacro:include filename="$(find shimmy_bot)/description/d435.urdf.xacro" /> -->
+  <xacro:diffbot_ros2_control name="DiffBot" use_mock_hardware="$(arg use_mock_hardware)"/>
   <xacro:diffbot/>
-
-<xacro:property name="depth_sensor_pose">
+  <xacro:property name="depth_sensor_pose">
     <origin xyz="0.14 0.0 0.5" rpy="1.5708 0 0"/>
-</xacro:property>
+  </xacro:property>
 
-<!--
-  <xacro:depth_sensor>
-    <xacro:insert_block name="depth_sensor_pose" />
-  </xacro:depth_sensor> -->
-
-  <xacro:diffbot_ros2_control
-    name="DiffBot" use_mock_hardware="$(arg use_mock_hardware)"/>
+  
+  <!-- <xacro:sensor_d435 name="camera" topics_ns="camera" parent="base_link" publish_pointcloud="true">
+    <origin xyz="0.02 0 0.44" rpy="0 0 0" />
+  </xacro:sensor_d435>   -->
   <xacro:include filename="$(find shimmy_bot)/description/zed_macro.urdf.xacro" />
   <xacro:zed_camera name="$(arg camera_name)" model="$(arg camera_model)">
-  <xacro:insert_block name="depth_sensor_pose" />
+    <xacro:insert_block name="depth_sensor_pose" />
   </xacro:zed_camera>
-  
-
-  
 
     <joint name="$(arg camera_name)_joint" type="fixed">
       <parent link="$(arg camera_name)_camera_link"/>
       <child link="base_link"/>
       <origin
-        xyz="-0.0 0.0 0.12"
+        xyz="-0.12 0.0 -0.35"
         rpy="0 0 0"
       />
     </joint>

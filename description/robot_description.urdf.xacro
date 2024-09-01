@@ -14,7 +14,7 @@
   <xacro:property name="wheel_radius" value="0.055" />
   <xacro:property name="caster_wheel_mass" value="0.1" /> <!-- arbitrary value for caster wheel mass -->
   <xacro:property name="caster_wheel_radius" value="0.015" />
-  <xacro:property name="z_offset" value="-${base_height/2}" /> <!-- Space btw top of beam and the each joint -->
+  <xacro:property name="z_offset" value="0.050" /> <!-- Space btw top of beam and the each joint -->
   <xacro:property name="x_offset" value="0.075" />
   <xacro:property name="y_offset" value="0.150" />
   <material name="blue">
@@ -48,7 +48,7 @@
     </collision>
 
     <visual>
-      <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
+      <origin xyz="0 0 0.185" rpy="0 0 0"/>
       <geometry>
         <box size="${base_width} ${base_length} ${base_height}"/>
       </geometry>
@@ -179,7 +179,7 @@
     <joint name="speaker_joint" type="fixed">
       <parent link="base_link"/>
       <child link="speaker_link"/>
-      <origin xyz="-0.060 0  0.2375" rpy="0 0 0"/>
+      <origin xyz="-0.060 0  0.350" rpy="0 0 0"/>
     </joint>
 
     <link name="speaker_link">

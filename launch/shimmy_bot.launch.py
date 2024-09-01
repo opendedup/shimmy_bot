@@ -15,10 +15,13 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler,OpaqueFunction,SetEnvironmentVariable
 from launch.conditions import IfCondition
+from launch_ros.descriptions import ComposableNode
 from launch.event_handlers import OnProcessExit, OnProcessStart
 from launch.substitutions import Command, FindExecutable, PythonExpression, PathJoinSubstitution, LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
+
+from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 
@@ -65,6 +68,12 @@ def launch_setup(context, *args, **kwargs):
             "shimmy.yaml",
         ]
     )
+    config_rtabmap = os.path.join(
+        get_package_share_directory('shimmy_bot'),
+        'config',
+        'config.ini'
+    )
+    
     zed_controllers = PathJoinSubstitution(
         [
             FindPackageShare("shimmy_bot"),
@@ -74,24 +83,13 @@ def launch_setup(context, *args, **kwargs):
     )
     
     rtabmap_params = get_package_share_directory('shimmy_bot') + '/config/rtabmap.yaml'
+    ekf_params = get_package_share_directory('shimmy_bot') + '/config/ekf.yaml'
     print("##########################################################")
     with open(rtabmap_params, 'r') as file:
         rtabmap_config = yaml.load(file, Loader=yaml.BaseLoader)
     rtabmap_launch_arguments={
-                'rtabmap_args': "--delete_db_on_start",
-                'rgb_topic': "/zed/zed_node/rgb/image_rect_color",
-                'depth_topic':'/zed/zed_node/depth/depth_registered',
-                'camera_info_topic':'/zed/zed_node/rgb/camera_info',
-                'frame_id':'zed_camera_link',
-                'approx_sync':'true',
-                'wait_imu_to_init':'true',
-                'imu_topic':'/zed/zed_node/imu/data',
-                'qos': '1',
-                'odom_topic':'/zed/zed_node/odom',
-                'publish_tf_odom':'false',
-                'namespace':'/',
-                'queue_size':'30',
-                #'visual_odometry':'true'
+        #'cfg':config_rtabmap
+               
             }
     rtabmap_config.update(rtabmap_launch_arguments)
     print(rtabmap_config)
@@ -104,6 +102,17 @@ def launch_setup(context, *args, **kwargs):
         ],
         output="both",
     )
+    
+    imu_node = Node(
+        package="shimmy_sensors",
+        executable="imu",
+        name="imu_node",
+        parameters=[
+            {'base_link_frame_id':'base_link'},
+        ],
+        output="both",
+    )
+    
     robot_state_pub_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
@@ -130,6 +139,13 @@ def launch_setup(context, *args, **kwargs):
         output="both",
     )
     
+    ekf_node = Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='both',
+            parameters=[os.path.join(get_package_share_directory("shimmy_bot"), 'config', 'ekf.yaml')],
+           )
     
     
     zed_wrapper_launch = IncludeLaunchDescription(
@@ -139,7 +155,19 @@ def launch_setup(context, *args, **kwargs):
             launch_arguments={
                 'camera_name': camera_name,
                 'camera_model': camera_model,
-                #'ros_params_override_path': zed_controllers
+                'config_path': zed_controllers,
+                # 'publish_tf':'false',
+                # 'publish_map_tf':'false'
+            }.items()
+        )
+    
+    realsense_wrapper_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution(
+                [FindPackageShare('realsense2_camera'),'launch', 'rs_launch.py']
+            )),
+            launch_arguments={
+                'depth_module.depth_profile':'1280x720x30',
+                ',pointcloud.enable':'true'
             }.items()
         )
     
@@ -149,6 +177,12 @@ def launch_setup(context, *args, **kwargs):
             )),
             launch_arguments=rtabmap_config.items()
         )
+    
+    camera_depth_frame = camera_name + '_left_camera_frame'
+    
+    
+    
+    
     
     shimmy_talk_launch = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution(
@@ -197,9 +231,13 @@ def launch_setup(context, *args, **kwargs):
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
         fgnode,
         twist_stamper,
+        #realsense_wrapper_launch,
         rtabmap_launch,
+        #imu_node,
+        #zed_cvt_component,
         shimmy_move,
-        #shimmy_talk_launch
+        #ekf_node,
+        shimmy_talk_launch
     ]
     
     
@@ -209,7 +247,7 @@ def generate_launch_description():
             SetEnvironmentVariable(name='RCUTILS_COLORIZED_OUTPUT', value='1'),
             DeclareLaunchArgument(
                 'use_zed_localization',
-                default_value='true',
+                default_value='false',
                 description='Creates a TF tree with `camera_link` as root frame if `true`, otherwise the root is `base_link`.',
                 choices=['true', 'false']),
             OpaqueFunction(function=launch_setup)    
