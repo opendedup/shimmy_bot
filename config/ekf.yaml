@@ -10,20 +10,23 @@ ekf_filter_node:
 
     map_frame: map             
     odom_frame: odom            
-    base_link_frame: zed_camera_link 
+    base_link_frame: base_link 
     world_frame: odom 
     odom0: /zed/zed_node/odom # Optional: ZED odometry (if used)
     imu0: /zed/zed_node/imu/data
-    odom0_config: [false, false, false, 
-               false, false, false, 
-               true,  true,  true,
-               false, false, false, 
-               false, false, false]
-    imu0_config:  [false, false, false, 
-                  true,  true,  true, 
-                  false, false, false,
-                  true,  true,  true,
-                  false, false, false]
+    # Config adjusted based on your odometry data
+    odom0_config: [true, true, true,   # x, y, z (use position)
+               true, true, true,    # roll, pitch, yaw (use orientation)
+               false, false, false,  # vx, vy, vz  (ignore linear velocities — use from IMU if available)
+               false, false, false,  # vroll, vpitch, vyaw (ignore angular velocities - used from IMU)
+               false, false, false] # ax, ay, az (ignore linear accelerations)
+               
+               
+    imu0_config: [false, false, false,  # x, y, z  (ignore position if ZED doesn't provide it directly in the IMU message)
+              true,  true,  true,    # roll, pitch, yaw (use orientation)
+              true, true, true,  # vx, vy, vz     (use linear velocities if provided)
+              true,  true,  true,   # vroll, vpitch, vyaw (use angular velocities)
+              false, false, false] # ax, ay, az    (usually ignore linear accelerations from ZED IMU due to noise)
 
     odom0_differential: false
     imu0_differential: false

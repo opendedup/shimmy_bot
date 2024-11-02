@@ -156,8 +156,9 @@ def launch_setup(context, *args, **kwargs):
                 'camera_name': camera_name,
                 'camera_model': camera_model,
                 'config_path': zed_controllers,
-                # 'publish_tf':'false',
-                # 'publish_map_tf':'false'
+                'publish_tf':'false',
+                'publish_map_tf':'false',
+                'publish_imu_tf':'false'
             }.items()
         )
     
@@ -237,7 +238,7 @@ def launch_setup(context, *args, **kwargs):
         #imu_node,
         #zed_cvt_component,
         shimmy_move,
-        #ekf_node,
+        ekf_node,
         shimmy_talk_launch
     ]
     
