@@ -13,9 +13,9 @@
   <!-- <xacro:include filename="$(find shimmy_bot)/description/d435.urdf.xacro" /> -->
   <xacro:diffbot_ros2_control name="DiffBot" use_mock_hardware="$(arg use_mock_hardware)"/>
   <xacro:diffbot/>
-  <xacro:property name="depth_sensor_pose">
+  <!-- <xacro:property name="depth_sensor_pose">
     <origin xyz="0.14 0.0 0.5" rpy="1.5708 0 0"/>
-  </xacro:property>
+  </xacro:property> -->
 
   
   <!-- <xacro:sensor_d435 name="camera" topics_ns="camera" parent="base_link" publish_pointcloud="true">
@@ -23,15 +23,14 @@
   </xacro:sensor_d435>   -->
   <xacro:include filename="$(find shimmy_bot)/description/zed_macro.urdf.xacro" />
   <xacro:zed_camera name="$(arg camera_name)" model="$(arg camera_model)">
-    <xacro:insert_block name="depth_sensor_pose" />
   </xacro:zed_camera>
-
-    <joint name="$(arg camera_name)_joint" type="fixed">
-      <parent link="base_link"/>
-      <child link="$(arg camera_name)_camera_link"/>
-      <origin
-        xyz="0.12 0.0 0.35"
-        rpy="0 0 0"
-      />
-    </joint>
+  <!-- Add a joint to connect the ZED Camera to the robot -->
+  <joint name="$(arg camera_name)_joint" type="fixed">
+    <parent link="$(arg camera_name)_camera_link"/>
+    <child link="base_link"/>
+    <origin
+      xyz="-0.05 0.0 0.0"
+      rpy="0 0 0"
+    />
+  </joint>
 </robot>

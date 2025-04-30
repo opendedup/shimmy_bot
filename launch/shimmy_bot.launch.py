@@ -156,21 +156,12 @@ def launch_setup(context, *args, **kwargs):
                 'camera_name': camera_name,
                 'camera_model': camera_model,
                 'config_path': zed_controllers,
-                'publish_tf':'false',
-                'publish_map_tf':'false',
-                'publish_imu_tf':'false'
+                'publish_tf':'true',
+                'publish_map_tf':'true',
+                'publish_imu_tf':'true'
             }.items()
         )
     
-    realsense_wrapper_launch = IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(PathJoinSubstitution(
-                [FindPackageShare('realsense2_camera'),'launch', 'rs_launch.py']
-            )),
-            launch_arguments={
-                'depth_module.depth_profile':'1280x720x30',
-                ',pointcloud.enable':'true'
-            }.items()
-        )
     
     rtabmap_launch = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution(
@@ -238,7 +229,7 @@ def launch_setup(context, *args, **kwargs):
         #imu_node,
         #zed_cvt_component,
         shimmy_move,
-        ekf_node,
+        #ekf_node,
         shimmy_talk_launch
     ]
     
